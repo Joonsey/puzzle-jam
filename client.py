@@ -58,7 +58,7 @@ if __name__ == "__main__":
     import os
     ip = os.environ.get('SERVER_IP', 'localhost')
 
-    client = Client('localhost', 8888)
+    client = Client(ip, 8888)
     client.register_with_server("pineapple")
     client.start()
 
