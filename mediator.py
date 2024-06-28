@@ -1,5 +1,7 @@
 import socket
 
+from packet import Packet, PacketType
+
 
 class MediatorServer:
     def __init__(self, host='0.0.0.0', port=8888):
@@ -12,7 +14,11 @@ class MediatorServer:
         while True:
             data, addr = self.server_socket.recvfrom(1024)
             if data:
-                phrase = data.decode('utf-8')
+                packet = Packet.deserialize(data)
+                if packet.packet_type != PacketType.CONNECT:
+                    continue
+
+                phrase = packet.payload.decode()
 
                 if phrase in self.clients.keys():
                     client = self.clients.pop(phrase)
