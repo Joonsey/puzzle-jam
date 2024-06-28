@@ -1,6 +1,8 @@
 import pygame
 import math
 
+DISCONNECT_TIME = 10
+
 def check_collision(rect: tuple[float, float, float, float], other_rect: tuple[float, float, float, float]) -> bool:
     x1, y1, w1, h1 = rect
     x2, y2, w2, h2 = other_rect

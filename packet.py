@@ -1,4 +1,3 @@
-import math
 import struct
 import time
 from enum import IntEnum, auto
@@ -11,7 +10,8 @@ class PacketType(IntEnum):
 
 class PayloadFormat:
     CONNECT = struct.Struct("32s")
-    UPDATE = struct.Struct("II")
+    # pos_x, pos_y, dir, anim_frame, state
+    UPDATE = struct.Struct("II?II")
 
 
 class Packet:

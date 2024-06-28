@@ -3,6 +3,13 @@ import threading
 import time
 
 from packet import Packet, PacketType, PayloadFormat
+from shared import DISCONNECT_TIME
+
+class Player:
+    def __init__(self):
+        self.position: tuple[float, float]
+        self.old_position: tuple[float, float]
+        self.direction: bool = False  # TODO typealias
 
 
 class Client:
@@ -11,6 +18,11 @@ class Client:
         self.server_port = server_port
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.peer_addr = None
+        self.phrase = ""
+        self.event_stack = []
+        self.time_last_packet: float = 0
+
+        self.other_player = None
 
     @property
     def peer_to_peer_established(self) -> bool:
@@ -18,6 +30,9 @@ class Client:
 
     def _send_packet(self, packet: Packet, to = None) -> None:
         self.socket.sendto(packet.serialize(), to if to else self.peer_addr) #pyright: ignore
+
+    def _check_disconnected(self) -> bool:
+        return self.time_last_packet <= time.time() + DISCONNECT_TIME
 
     def register_with_server(self, phrase: str):
         packet = Packet(PacketType.CONNECT, 0, PayloadFormat.CONNECT.pack(phrase.encode()))
@@ -27,7 +42,7 @@ class Client:
         peer_ip, peer_port = data.decode('utf-8').split(':')
 
         self.peer_addr = (peer_ip, int(peer_port))
-        print(f"Received peer info: {self.peer_addr}")
+        self.phrase = phrase
 
     def start_communication(self):
         packet = Packet(PacketType.CONNECT, 0, PayloadFormat.CONNECT.pack("UDP connect packet".encode()))
@@ -39,11 +54,11 @@ class Client:
                 packet = Packet.deserialize(data)
                 threading.Thread(target=self.handle_data, args=(packet,), daemon=True).start()
 
-    def send_message(self, message: str):
+    def send_message(self, message: str) -> None:
         packet = Packet(PacketType.CONNECT, 0, PayloadFormat.CONNECT.pack(message.encode()))
         self._send_packet(packet)
 
-    def send_update(self, position: tuple[float, float]):
+    def send_update(self, position: tuple[float, float], direction: bool, anim_frame: int, state: int) -> None: # TODO typealias
         packet = Packet(PacketType.UPDATE, 0, PayloadFormat.UPDATE.pack(*position))
         self._send_packet(packet)
 
@@ -51,7 +66,17 @@ class Client:
         threading.Thread(target=self.start_communication, daemon=True).start()
 
     def handle_data(self, packet: Packet) -> None:
+        self.time_last_packet = time.time()
         print("Recieved packet:", packet)
+        if packet.packet_type == PacketType.UPDATE:
+            x_pos, y_pos, direction, anim_frame, state = PayloadFormat.UPDATE.unpack(packet.payload)
+            if not self.other_player:
+                #  self.event_stack.append()  add Player joined event
+                self.other_player = Player()
+
+            self.other_player.old_position = self.other_player.position
+            self.other_player.position = (x_pos, y_pos)
+            self.other_player.direction = direction
 
 
 if __name__ == "__main__":
