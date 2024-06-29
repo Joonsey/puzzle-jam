@@ -21,8 +21,9 @@ class Client:
         self.phrase = ""
         self.event_stack = []
         self.time_last_packet: float = 0
+        self.running = True
 
-        self.other_player = None
+        self.other_player: Player | None = None
 
     @property
     def peer_to_peer_established(self) -> bool:
@@ -48,7 +49,7 @@ class Client:
         packet = Packet(PacketType.CONNECT, 0, PayloadFormat.CONNECT.pack("UDP connect packet".encode()))
         self._send_packet(packet)
 
-        while True:
+        while self.running:
             data, _ = self.socket.recvfrom(1024)
             if data:
                 packet = Packet.deserialize(data)
@@ -59,7 +60,7 @@ class Client:
         self._send_packet(packet)
 
     def send_update(self, position: tuple[float, float], direction: bool, anim_frame: int, state: int) -> None: # TODO typealias
-        packet = Packet(PacketType.UPDATE, 0, PayloadFormat.UPDATE.pack(*position))
+        packet = Packet(PacketType.UPDATE, 0, PayloadFormat.UPDATE.pack(int(position[0]), int(position[1]), direction, anim_frame, state))
         self._send_packet(packet)
 
     def start(self) -> None:
@@ -74,9 +75,14 @@ class Client:
                 #  self.event_stack.append()  add Player joined event
                 self.other_player = Player()
 
-            self.other_player.old_position = self.other_player.position
+            else:
+                self.other_player.old_position = self.other_player.position
+
             self.other_player.position = (x_pos, y_pos)
             self.other_player.direction = direction
+
+    def stop(self) -> None:
+        self.running = False
 
 
 if __name__ == "__main__":
